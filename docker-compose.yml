@@ -1,0 +1,10 @@
+version: '2'
+services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+  mongoui:
+    image: mongo-express:latest
+    ports:
+      - "8081:8081"
