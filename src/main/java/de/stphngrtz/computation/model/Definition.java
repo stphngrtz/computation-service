@@ -8,6 +8,12 @@ public class Definition {
     public final String name;
     public final BigDecimal value;
 
+    @SuppressWarnings("unused")
+    private Definition() {
+        this.name = "";
+        this.value = BigDecimal.ZERO;
+    }
+
     public Definition(String name, BigDecimal value) {
         this.name = name;
         this.value = value;

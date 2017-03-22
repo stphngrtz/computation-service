@@ -31,6 +31,10 @@ public class Jackson {
     private Jackson() {
     }
 
+    public static ObjectMapper mapper() {
+        return mapper;
+    }
+
     /**
      * @see ObjectMapper#writeValueAsString(Object)
      */

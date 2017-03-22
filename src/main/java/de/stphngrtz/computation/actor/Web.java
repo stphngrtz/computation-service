@@ -50,14 +50,14 @@ public class Web extends AbstractActor {
                 .match(Protocol.StructuresGetRequest.class, message -> {
                     log.debug("StructuresGetRequest! ids:{} fields:{}", message.ids(), message.fields());
 
-                    BiMap<String, String> fields = Structure.Fields.asMap(field -> message.fields().contains(field));
-                    List<Map<String, Object>> strucutres = Structure.rawCollection(database)
+                    BiMap<String, String> fields = Structure.Fields.asMap(field -> Objects.equals(field, "id") || message.fields().contains(field));
+                    List<Map<String, Object>> structures = Structure.rawCollection(database)
                             .find(message.ids().isEmpty() ? new BsonDocument() : Filters.in(Structure.Fields.id, message.ids()))
                             .projection(Projections.include(new ArrayList<>(fields.values())))
                             .map(document -> fields.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> document.get(e.getValue()))))
                             .into(new ArrayList<>());
 
-                    sender().tell(new Protocol.StructuresGetResponse(strucutres), self());
+                    sender().tell(new Protocol.StructuresGetResponse(structures), self());
                 })
                 .build());
     }

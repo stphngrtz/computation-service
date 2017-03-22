@@ -22,9 +22,13 @@ import de.stphngrtz.computation.web.Routes;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 
 public class Main {
+
+    private static final Set<Runnable> runnables = new HashSet<>();
 
     public static void main(String[] args) {
         CommandLineInterface cli = new CommandLineInterface(args);
@@ -35,15 +39,19 @@ public class Main {
             String hostname = getHostname();
 
             if (cli.startMaster()) {
-                startMaster(hostname, cli.masterPort());
+                runnables.add(startMaster(hostname, cli.masterPort()));
             }
             if (cli.startWorker()) {
-                startWorker(hostname, cli.workerPort(), cli.masterHostname(), cli.masterPort(), cli.dbHostname(), cli.dbPort());
+                runnables.add(startWorker(hostname, cli.workerPort(), cli.masterHostname(), cli.masterPort(), cli.dbHostname(), cli.dbPort(), cli.dbInMemory()));
             }
             if (cli.startWeb()) {
-                startWeb(hostname, cli.webPort(), cli.httpPort(), cli.masterHostname(), cli.masterPort(), cli.dbHostname(), cli.dbPort());
+                runnables.add(startWeb(hostname, cli.webPort(), cli.httpPort(), cli.masterHostname(), cli.masterPort(), cli.dbHostname(), cli.dbPort(), cli.dbInMemory()));
             }
         }
+    }
+
+    static void exit() {
+        runnables.forEach(Runnable::run);
     }
 
     private static String getHostname() {
@@ -78,7 +86,7 @@ public class Main {
         return system::terminate;
     }
 
-    private static Runnable startWorker(String workerHostname, int workerPort, String masterHostname, int masterPort, String dbHostname, int dbPort) {
+    private static Runnable startWorker(String workerHostname, int workerPort, String masterHostname, int masterPort, String dbHostname, int dbPort, boolean dbInMemory) {
         Config config = ConfigFactory.empty()
                 .withFallback(ConfigFactory.parseString("akka.cluster.client.initial-contacts=[\"akka.tcp://" + ACTOR_SYSTEM_NAME_MASTER + "@" + masterHostname + ":" + masterPort + "/system/receptionist\"]"))
                 .withFallback(ConfigFactory.parseString("akka.remote.netty.tcp.hostname=" + workerHostname))
@@ -86,7 +94,7 @@ public class Main {
                 .withFallback(ConfigFactory.parseResourcesAnySyntax("worker"))
                 .withFallback(ConfigFactory.load("default"));
 
-        MongoDatabase database = Mongo.getDatabase(dbHostname, dbPort);
+        MongoDatabase database = Mongo.getDatabase(dbHostname, dbPort, dbInMemory);
 
         ActorSystem system = ActorSystem.create(ACTOR_SYSTEM_NAME_WORKER, config);
         system.actorOf(Worker.props(database), "worker");
@@ -97,7 +105,7 @@ public class Main {
         };
     }
 
-    private static Runnable startWeb(String webHostname, int webPort, int httpPort, String masterHostname, int masterPort, String dbHostname, int dbPort) {
+    private static Runnable startWeb(String webHostname, int webPort, int httpPort, String masterHostname, int masterPort, String dbHostname, int dbPort, boolean dbInMemory) {
         Config config = ConfigFactory.empty()
                 .withFallback(ConfigFactory.parseString("akka.cluster.client.initial-contacts=[\"akka.tcp://" + ACTOR_SYSTEM_NAME_MASTER + "@" + masterHostname + ":" + masterPort + "/system/receptionist\"]"))
                 .withFallback(ConfigFactory.parseString("akka.remote.netty.tcp.hostname=" + webHostname))
@@ -105,7 +113,7 @@ public class Main {
                 .withFallback(ConfigFactory.parseResourcesAnySyntax("web"))
                 .withFallback(ConfigFactory.load("default"));
 
-        MongoDatabase database = Mongo.getDatabase(dbHostname, dbPort);
+        MongoDatabase database = Mongo.getDatabase(dbHostname, dbPort, dbInMemory);
 
         ActorSystem system = ActorSystem.create(ACTOR_SYSTEM_NAME_WEB, config);
         ActorRef producer = system.actorOf(Producer.props(), "producer");

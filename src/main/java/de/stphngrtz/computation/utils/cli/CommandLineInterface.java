@@ -2,6 +2,8 @@ package de.stphngrtz.computation.utils.cli;
 
 import org.apache.commons.cli.*;
 
+import java.util.Objects;
+
 public class CommandLineInterface {
 
     private static final Options OPTIONS = new Options()
@@ -68,10 +70,14 @@ public class CommandLineInterface {
     }
 
     public String dbHostname() {
-        return cl.getOptionValue("db-hostname", "localhost");
+        return cl.getOptionValue("db-hostname", "in-memory");
     }
 
     public int dbPort() {
         return Integer.valueOf(cl.getOptionValue("db-port", "27017"));
+    }
+
+    public boolean dbInMemory() {
+        return Objects.equals(dbHostname(), "in-memory");
     }
 }

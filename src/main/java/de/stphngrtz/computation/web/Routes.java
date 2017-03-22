@@ -4,7 +4,9 @@ import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.http.javadsl.model.*;
 import akka.http.javadsl.model.headers.Location;
+import akka.http.javadsl.server.RejectionHandler;
 import akka.http.javadsl.server.Route;
+import akka.http.javadsl.server.ValidationRejection;
 import akka.http.javadsl.server.directives.LogEntry;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
@@ -20,6 +22,10 @@ import static akka.http.javadsl.server.Directives.*;
 
 public class Routes {
 
+    private static final RejectionHandler rejectionHandler = RejectionHandler.newBuilder()
+            .handle(ValidationRejection.class, rejection -> logRequest(request -> LogEntry.error(rejection), () -> complete(StatusCodes.BAD_REQUEST)))
+            .build();
+
     public static Route createRoute(ActorRef web, ExecutionContextExecutor dispatcher) {
         return logRequest(LogEntry::debug, () -> route(
                 pathEndOrSingleSlash(() -> get(() -> complete("Computation-Service"))),
@@ -33,11 +39,11 @@ public class Routes {
                                                         .withEntity(toEntity(structuresGetResponse.structures))
                                         ), dispatcher)
                                 )))),
-                                post(() -> entity(Jackson.unmarshaller(Structure.class), structure -> extractUri(uri -> {
+                                post(() -> handleRejections(rejectionHandler, () -> entity(Jackson.unmarshaller(Structure.class), structure -> extractUri(uri -> {
                                     Structure.Id id = new Structure.Id();
                                     web.tell(new Web.Protocol.StructureCreateRequest(structure.with(id)), ActorRef.noSender());
                                     return complete(HttpResponse.create().withStatus(StatusCodes.CREATED).addHeader(Location.create(uri.addPathSegment(id.toString()))));
-                                })))
+                                }))))
                         )),
                         path(structureId -> route(
                                 get(() -> completeWithFutureResponse(
@@ -50,10 +56,10 @@ public class Routes {
 
                                         }), dispatcher)
                                 )),
-                                put(() -> entity(Jackson.unmarshaller(Structure.class), structure -> {
+                                put(() -> handleRejections(rejectionHandler, () -> entity(Jackson.unmarshaller(Structure.class), structure -> {
                                     web.tell(new Web.Protocol.StructureUpdateRequest(structure.with(new Structure.Id(structureId))), ActorRef.noSender());
                                     return complete(HttpResponse.create().withStatus(StatusCodes.NO_CONTENT));
-                                })),
+                                }))),
                                 delete(() -> {
                                     web.tell(new Web.Protocol.StructureDeleteRequest(new Structure.Id(structureId)), ActorRef.noSender());
                                     return complete(HttpResponse.create().withStatus(StatusCodes.NO_CONTENT));

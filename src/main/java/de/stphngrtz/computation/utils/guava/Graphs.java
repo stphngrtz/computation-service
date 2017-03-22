@@ -4,9 +4,7 @@ import com.google.common.graph.Graph;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public class Graphs {
 
@@ -54,6 +52,49 @@ public class Graphs {
         @Override
         public int hashCode() {
             return Objects.hash(source, target);
+        }
+    }
+
+    /**
+     * Builder für Graphs
+     */
+    public static <N> Graph<N> builder(Graphs.Builder.Node<N> node) {
+        MutableGraph<N> graph = Graphs.newGraph();
+        node.into(graph);
+        return graph;
+    }
+
+    /**
+     * Marker-Interface für {@link Node}
+     */
+    public interface Builder {
+
+        class Node<N> {
+            private final N n;
+            private final List<Node<N>> nodes;
+
+            Node(N n, List<Node<N>> nodes) {
+                this.n = n;
+                this.nodes = nodes;
+            }
+
+            void into(MutableGraph<N> graph) {
+                if (nodes.isEmpty())
+                    graph.addNode(n);
+                else {
+                    nodes.forEach(node -> node.into(graph, n));
+                }
+            }
+
+            void into(MutableGraph<N> graph, N n) {
+                graph.putEdge(n, this.n);
+                nodes.forEach(node -> node.into(graph, this.n));
+            }
+        }
+
+        @SafeVarargs
+        static <N> Node<N> node(N n, Node<N>... nodes) {
+            return new Node<>(n, Arrays.asList(nodes));
         }
     }
 }

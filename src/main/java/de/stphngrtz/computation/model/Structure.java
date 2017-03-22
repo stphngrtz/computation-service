@@ -6,6 +6,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.graph.Graph;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import de.stphngrtz.computation.utils.guava.Graphs;
 import org.bson.Document;
 
 import java.lang.reflect.Field;
@@ -19,6 +20,12 @@ public class Structure {
 
     public final Id id;
     public final Graph<Element> elements;
+
+    @SuppressWarnings("unused")
+    private Structure() {
+        this.id = new Id();
+        this.elements = Graphs.newGraph();
+    }
 
     public Structure(Id id, Graph<Element> elements) {
         this.id = id;

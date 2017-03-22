@@ -1,5 +1,6 @@
 package de.stphngrtz.computation.model;
 
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
@@ -7,6 +8,12 @@ public class Element {
 
     public final String name;
     public final Set<Definition> definitions;
+
+    @SuppressWarnings("unused")
+    private Element() {
+        this.name = "";
+        this.definitions = Collections.emptySet();
+    }
 
     public Element(String name, Set<Definition> definitions) {
         this.name = name;

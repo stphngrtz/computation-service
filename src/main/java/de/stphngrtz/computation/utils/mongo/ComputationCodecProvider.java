@@ -18,22 +18,22 @@ public class ComputationCodecProvider implements CodecProvider {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Codec<T> get(Class<T> aClass, CodecRegistry codecRegistry) {
-        if (Objects.equals(aClass, Structure.class))
-            return (Codec<T>) new StructureCodec(codecRegistry);
-        if (Objects.equals(aClass, Structure.Id.class))
+    public <T> Codec<T> get(Class<T> clazz, CodecRegistry registry) {
+        if (Objects.equals(clazz, Structure.class))
+            return (Codec<T>) new StructureCodec(registry);
+        if (Objects.equals(clazz, Structure.Id.class))
             return (Codec<T>) new StructureIdCodec();
-        if (Objects.equals(aClass, Element.class))
-            return (Codec<T>) new ElementCodec(codecRegistry);
-        if (Objects.equals(aClass, Definition.class))
-            return (Codec<T>) new DefinitionCodec(codecRegistry);
+        if (Objects.equals(clazz, Element.class))
+            return (Codec<T>) new ElementCodec(registry);
+        if (Objects.equals(clazz, Definition.class))
+            return (Codec<T>) new DefinitionCodec(registry);
         return null;
     }
 
     private class StructureCodec extends ToDocumentWithIdCodec<Structure, Structure.Id> {
-        StructureCodec(CodecRegistry codecRegistry) {
-            super(codecRegistry.get(Structure.Id.class));
-            Codec<Graph<Element>> graphCodec = new GraphCodec<>(codecRegistry.get(Element.class));
+        StructureCodec(CodecRegistry registry) {
+            super(registry.get(Structure.Id.class));
+            Codec<Graph<Element>> graphCodec = new GraphCodec<>(registry.get(Element.class));
 
             register((writer, value, encoderContext) -> {
                 writer.writeName(Structure.Fields.elements);
@@ -70,8 +70,8 @@ public class ComputationCodecProvider implements CodecProvider {
     }
 
     private class ElementCodec extends ToDocumentCodec<Element> {
-        ElementCodec(CodecRegistry codecRegistry) {
-            Codec<Definition> definitionCodec = codecRegistry.get(Definition.class);
+        ElementCodec(CodecRegistry registry) {
+            Codec<Definition> definitionCodec = registry.get(Definition.class);
 
             register((writer, value, encoderContext) -> {
                 writer.writeString(Element.Fields.name, value.name);
@@ -102,8 +102,8 @@ public class ComputationCodecProvider implements CodecProvider {
     }
 
     private class DefinitionCodec extends ToDocumentCodec<Definition> {
-        DefinitionCodec(CodecRegistry codecRegistry) {
-            Codec<BigDecimal> bigDecimalCodec = codecRegistry.get(BigDecimal.class);
+        DefinitionCodec(CodecRegistry registry) {
+            Codec<BigDecimal> bigDecimalCodec = registry.get(BigDecimal.class);
 
             register((writer, value, encoderContext) -> {
                 writer.writeString(Definition.Fields.name, value.name);
