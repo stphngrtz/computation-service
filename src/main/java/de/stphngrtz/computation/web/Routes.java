@@ -11,6 +11,7 @@ import akka.http.javadsl.server.directives.LogEntry;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import de.stphngrtz.computation.actor.Web;
+import de.stphngrtz.computation.model.Computation;
 import de.stphngrtz.computation.model.Structure;
 import de.stphngrtz.computation.utils.jackson.Jackson;
 import scala.concurrent.ExecutionContextExecutor;
@@ -48,13 +49,10 @@ public class Routes {
                         path(structureId -> route(
                                 get(() -> completeWithFutureResponse(
                                         Patterns.ask(web, new Web.Protocol.StructureGetRequest(new Structure.Id(structureId)), Timeout.apply(5, TimeUnit.SECONDS))
-                                        .map(with(Web.Protocol.StructureGetResponse.class, structureGetResponse -> {
-                                            if (structureGetResponse.structure.isPresent())
-                                                return HttpResponse.create().withStatus(StatusCodes.OK).withEntity(toEntity(structureGetResponse.structure.get()));
-                                            else
-                                                return HttpResponse.create().withStatus(StatusCodes.NOT_FOUND);
-
-                                        }), dispatcher)
+                                        .map(with(Web.Protocol.StructureGetResponse.class, structureGetResponse -> structureGetResponse.structure
+                                                .map(structure -> HttpResponse.create().withStatus(StatusCodes.OK).withEntity(toEntity(structure)))
+                                                .orElseGet(() -> HttpResponse.create().withStatus(StatusCodes.NOT_FOUND))
+                                        ), dispatcher)
                                 )),
                                 put(() -> handleRejections(rejectionHandler, () -> entity(Jackson.unmarshaller(Structure.class), structure -> {
                                     web.tell(new Web.Protocol.StructureUpdateRequest(structure.with(new Structure.Id(structureId))), ActorRef.noSender());
@@ -68,13 +66,32 @@ public class Routes {
                 )),
                 pathPrefix("computations", () -> route(
                         pathEndOrSingleSlash(() -> route(
-                                get(() -> complete("list of computations")),
-                                post(() -> complete("new computation"))
+                                get(() -> parameterOptional("ids", ids -> parameterOptional("fields", fields -> completeWithFutureResponse(
+                                        Patterns.ask(web, new Web.Protocol.ComputationsGetRequest(ids, fields), Timeout.apply(5, TimeUnit.SECONDS))
+                                                .map(with(Web.Protocol.ComputationsGetResponse.class, structuresGetResponse ->
+                                                        HttpResponse.create()
+                                                                .withStatus(StatusCodes.OK)
+                                                                .withEntity(toEntity(structuresGetResponse.computations))
+                                                ), dispatcher)
+                                )))),
+                                post(() -> handleRejections(rejectionHandler, () -> entity(Jackson.unmarshaller(Computation.class), computation -> extractUri(uri -> {
+                                    Computation.Id id = new Computation.Id();
+                                    web.tell(new Web.Protocol.ComputationCreateRequest(computation.with(id).with(Computation.Status.NEW)), ActorRef.noSender());
+                                    return complete(HttpResponse.create().withStatus(StatusCodes.CREATED).addHeader(Location.create(uri.addPathSegment(id.toString()))));
+                                }))))
                         )),
                         path(computationId -> route(
-                                get(() -> complete("computation")),
-                                put(() -> complete("updated computation")),
-                                delete(() -> complete("deleted computation"))
+                                get(() -> completeWithFutureResponse(
+                                        Patterns.ask(web, new Web.Protocol.ComputationGetRequest(new Computation.Id(computationId)), Timeout.apply(5, TimeUnit.SECONDS))
+                                                .map(with(Web.Protocol.ComputationGetResponse.class, computationGetResponse -> computationGetResponse.computation
+                                                        .map(computation -> HttpResponse.create().withStatus(StatusCodes.OK).withEntity(toEntity(computation)))
+                                                        .orElseGet(() -> HttpResponse.create().withStatus(StatusCodes.NOT_FOUND))
+                                                ), dispatcher)
+                                )),
+                                delete(() -> {
+                                    web.tell(new Web.Protocol.ComputationDeleteRequest(new Computation.Id(computationId)), ActorRef.noSender());
+                                    return complete(HttpResponse.create().withStatus(StatusCodes.NO_CONTENT));
+                                })
                         ))
                 ))
         ));

@@ -12,6 +12,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.UpdateOptions;
+import de.stphngrtz.computation.model.Computation;
 import de.stphngrtz.computation.model.Structure;
 import de.stphngrtz.computation.utils.kryo.KryoMessage;
 import org.bson.BsonDocument;
@@ -40,11 +41,11 @@ public class Web extends AbstractActor {
                     sender().tell(new Protocol.StructureGetResponse(structure), self());
                 })
                 .match(Protocol.StructureUpdateRequest.class, message -> {
-                    log.debug("StructureUpdateRequest! mengenstruktur:{}", message.structure.id);
+                    log.debug("StructureUpdateRequest! structure:{}", message.structure.id);
                     Structure.collection(database).replaceOne(Filters.eq(Structure.Fields.id, message.structure.id), message.structure, new UpdateOptions().upsert(true));
                 })
                 .match(Protocol.StructureDeleteRequest.class, message -> {
-                    log.debug("StructureDeleteRequest! mengenstruktur:{}", message.structureId);
+                    log.debug("StructureDeleteRequest! structure:{}", message.structureId);
                     Structure.collection(database).deleteOne(Filters.eq(Structure.Fields.id, message.structureId));
                 })
                 .match(Protocol.StructuresGetRequest.class, message -> {
@@ -58,6 +59,31 @@ public class Web extends AbstractActor {
                             .into(new ArrayList<>());
 
                     sender().tell(new Protocol.StructuresGetResponse(structures), self());
+                })
+                .match(Protocol.ComputationCreateRequest.class, message -> {
+                    log.debug("ComputationCreateRequest! computation:{}", message.computation.id);
+                    Computation.collection(database).insertOne(message.computation);
+                })
+                .match(Protocol.ComputationGetRequest.class, message -> {
+                    log.debug("ComputationGetRequest! computation:{}", message.computationId);
+                    Optional<Computation> computation = Optional.ofNullable(Computation.collection(database).find(Filters.eq(Computation.Fields.id, message.computationId)).first());
+                    sender().tell(new Protocol.ComputationGetResponse(computation), self());
+                })
+                .match(Protocol.ComputationDeleteRequest.class, message -> {
+                    log.debug("ComputationDeleteRequest! computation:{}", message.computationId);
+                    Computation.collection(database).deleteOne(Filters.eq(Computation.Fields.id, message.computationId));
+                })
+                .match(Protocol.ComputationsGetRequest.class, message -> {
+                    log.debug("ComputationsGetRequest! ids:{} fields:{}", message.ids(), message.fields());
+
+                    BiMap<String, String> fields = Computation.Fields.asMap(field -> Objects.equals(field, "id") || message.fields().contains(field));
+                    List<Map<String, Object>> computations = Computation.rawCollection(database)
+                            .find(message.ids().isEmpty() ? new BsonDocument() : Filters.in(Computation.Fields.id, message.ids()))
+                            .projection(Projections.include(new ArrayList<>(fields.values())))
+                            .map(document -> fields.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> document.get(e.getValue()))))
+                            .into(new ArrayList<>());
+
+                    sender().tell(new Protocol.ComputationsGetResponse(computations), self());
                 })
                 .build());
     }
@@ -127,6 +153,64 @@ public class Web extends AbstractActor {
 
             StructuresGetResponse(List<Map<String, Object>> structures) {
                 this.structures = structures;
+            }
+        }
+
+        final class ComputationCreateRequest implements KryoMessage {
+            final Computation computation;
+
+            public ComputationCreateRequest(Computation computation) {
+                this.computation = computation;
+            }
+        }
+
+        final class ComputationGetRequest implements KryoMessage {
+            final Computation.Id computationId;
+
+            public ComputationGetRequest(Computation.Id computationId) {
+                this.computationId = computationId;
+            }
+        }
+
+        final class ComputationGetResponse implements KryoMessage {
+            public final Optional<Computation> computation;
+
+            ComputationGetResponse(Optional<Computation> computation) {
+                this.computation = computation;
+            }
+        }
+
+        final class ComputationDeleteRequest implements KryoMessage {
+            final Computation.Id computationId;
+
+            public ComputationDeleteRequest(Computation.Id computationId) {
+                this.computationId = computationId;
+            }
+        }
+
+        final class ComputationsGetRequest implements KryoMessage {
+            private final Optional<String> ids;
+            private final Optional<String> fields;
+
+            public ComputationsGetRequest(Optional<String> ids, Optional<String> fields) {
+                this.ids = ids;
+                this.fields = fields;
+            }
+
+            Set<Computation.Id> ids() {
+                return Stream.of(ids.orElse("").split(",")).filter(id -> !Strings.isNullOrEmpty(id)).map(Computation.Id::new).collect(Collectors.toSet());
+            }
+
+            Set<String> fields() {
+                return Stream.of(fields.orElse("").split(",")).filter(field -> !Strings.isNullOrEmpty(field)).collect(Collectors.toSet());
+            }
+        }
+
+        final class ComputationsGetResponse implements KryoMessage {
+            public final List<Map<String, Object>> computations;
+
+            ComputationsGetResponse(List<Map<String, Object>> computations) {
+                this.computations = computations;
             }
         }
     }

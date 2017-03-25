@@ -18,9 +18,6 @@ class ComputationModule extends SimpleModule {
 
     ComputationModule() {
         super("ComputationModule", new Version(1, 0, 0, "SNAPSHOT", "de.stphngrtz", "computation-service"));
-
-        // addSerializer(Structure.Id.class, toStringSerializer());
-        // addDeserializer(Structure.Id.class, fromStringDeserializer(Structure.Id::new));
     }
 
     private static <T> JsonSerializer<T> toStringSerializer() {

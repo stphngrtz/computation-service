@@ -1,20 +1,22 @@
 package de.stphngrtz.computation.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.math.BigDecimal;
 import java.util.Objects;
 
 public class Definition {
 
-    public final String name;
+    public final Name name;
     public final BigDecimal value;
 
     @SuppressWarnings("unused")
     private Definition() {
-        this.name = "";
+        this.name = new Name();
         this.value = BigDecimal.ZERO;
     }
 
-    public Definition(String name, BigDecimal value) {
+    public Definition(Name name, BigDecimal value) {
         this.name = name;
         this.value = value;
     }
@@ -31,6 +33,37 @@ public class Definition {
     @Override
     public int hashCode() {
         return Objects.hash(name, value);
+    }
+
+    public static class Name {
+        @JsonProperty
+        private final String value;
+
+        Name() {
+            this.value = "";
+        }
+
+        public Name(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Name name = (Name) o;
+            return Objects.equals(value, name.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(value);
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
     }
 
     public static class Fields {

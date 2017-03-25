@@ -3,7 +3,6 @@ package de.stphngrtz.computation;
 import akka.http.javadsl.model.StatusCodes;
 import com.google.common.graph.Graph;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
 import de.stphngrtz.computation.model.Definition;
 import de.stphngrtz.computation.model.Element;
 import de.stphngrtz.computation.model.Structure;
@@ -42,11 +41,6 @@ public class StructuresST {
         RestAssured.baseURI = "http://localhost";
         RestAssured.port = 8080;
         RestAssured.config = RestAssuredConfig.config().objectMapperConfig(ObjectMapperConfig.objectMapperConfig().jackson2ObjectMapperFactory((aClass, s) -> Jackson.mapper()));
-
-        // Workaround for avoiding an error while reading from Fongo without an earlier write..
-        Structure.Id id = new Structure.Id();
-        create(new Structure(id, Graphs.newGraph()));
-        delete(id);
     }
 
     @Before
@@ -118,8 +112,8 @@ public class StructuresST {
     @Test
     public void POST_Request_with_subsequent_GET_Request() throws Exception {
         Graph<Element> elements = Graphs.builder(
-                node(new Element("Element 1", with(new Definition("Definition 1", new BigDecimal(10)))),
-                        node(new Element("Element 2", with(new Definition("Definition 2", new BigDecimal(20)))))
+                node(new Element(new Element.Name("Element 1"), with(new Definition(new Definition.Name("Definition 1"), new BigDecimal(10)))),
+                        node(new Element(new Element.Name("Element 2"), with(new Definition(new Definition.Name("Definition 2"), new BigDecimal(20)))))
                 )
         );
 
@@ -160,8 +154,8 @@ public class StructuresST {
         create(new Structure(id, Graphs.newGraph()));
 
         Graph<Element> elements = Graphs.builder(
-                node(new Element("Element 1", with(new Definition("Definition 1", new BigDecimal(10)))),
-                        node(new Element("Element 2", with(new Definition("Definition 2", new BigDecimal(20)))))
+                node(new Element(new Element.Name("Element 1"), with(new Definition(new Definition.Name("Definition 1"), new BigDecimal(10)))),
+                        node(new Element(new Element.Name("Element 2"), with(new Definition(new Definition.Name("Definition 2"), new BigDecimal(20)))))
                 )
         );
 
@@ -189,8 +183,8 @@ public class StructuresST {
     @Test
     public void PUT_Request_for_non_existing_Structure() throws Exception {
         Graph<Element> elements = Graphs.builder(
-                node(new Element("Element 1", with(new Definition("Definition 1", new BigDecimal(10)))),
-                        node(new Element("Element 2", with(new Definition("Definition 2", new BigDecimal(20)))))
+                node(new Element(new Element.Name("Element 1"), with(new Definition(new Definition.Name("Definition 1"), new BigDecimal(10)))),
+                        node(new Element(new Element.Name("Element 2"), with(new Definition(new Definition.Name("Definition 2"), new BigDecimal(20)))))
                 )
         );
 
@@ -240,9 +234,5 @@ public class StructuresST {
 
     private static void create(Structure structure) {
         Structure.collection(DB).insertOne(structure);
-    }
-
-    private static void delete(Structure.Id id) {
-        Structure.collection(DB).deleteOne(Filters.eq(Structure.Fields.id, id));
     }
 }

@@ -1,6 +1,7 @@
 package de.stphngrtz.computation.utils.mongo;
 
 import com.google.common.graph.Graph;
+import de.stphngrtz.computation.model.Computation;
 import de.stphngrtz.computation.model.Definition;
 import de.stphngrtz.computation.model.Element;
 import de.stphngrtz.computation.model.Structure;
@@ -25,8 +26,19 @@ public class ComputationCodecProvider implements CodecProvider {
             return (Codec<T>) new StructureIdCodec();
         if (Objects.equals(clazz, Element.class))
             return (Codec<T>) new ElementCodec(registry);
+        if (Objects.equals(clazz, Element.Name.class))
+            return (Codec<T>) new ElementNameCodec();
         if (Objects.equals(clazz, Definition.class))
             return (Codec<T>) new DefinitionCodec(registry);
+        if (Objects.equals(clazz, Definition.Name.class))
+            return (Codec<T>) new DefinitionNameCodec();
+        if (Objects.equals(clazz, Computation.class))
+            return (Codec<T>) new ComputationCodec(registry);
+        if (Objects.equals(clazz, Computation.Id.class))
+            return (Codec<T>) new ComputationIdCodec();
+        if (Objects.equals(clazz, Computation.Expression.class))
+            return (Codec<T>) new ComputationExpressionCodec();
+
         return null;
     }
 
@@ -71,17 +83,20 @@ public class ComputationCodecProvider implements CodecProvider {
 
     private class ElementCodec extends ToDocumentCodec<Element> {
         ElementCodec(CodecRegistry registry) {
+            Codec<Element.Name> nameCodec = registry.get(Element.Name.class);
             Codec<Definition> definitionCodec = registry.get(Definition.class);
 
             register((writer, value, encoderContext) -> {
-                writer.writeString(Element.Fields.name, value.name);
+                writer.writeName(Element.Fields.name);
+                encoderContext.encodeWithChildContext(nameCodec, writer, value.name);
 
                 writer.writeStartArray(Element.Fields.definitions);
                 value.definitions.forEach(definition -> encoderContext.encodeWithChildContext(definitionCodec, writer, definition));
                 writer.writeEndArray();
             });
             register((reader, decoderContext) -> {
-                String name = reader.readString(Element.Fields.name);
+                reader.readName(Element.Fields.name);
+                Element.Name name = nameCodec.decode(reader, decoderContext);
 
                 reader.readName(Element.Fields.definitions);
                 Set<Definition> definitions = new HashSet<>();
@@ -101,18 +116,34 @@ public class ComputationCodecProvider implements CodecProvider {
         }
     }
 
+    private class ElementNameCodec extends ToStringCodec<Element.Name> {
+
+        @Override
+        String toString(Element.Name value) {
+            return value.toString();
+        }
+
+        @Override
+        Element.Name fromString(String value) {
+            return new Element.Name(value);
+        }
+    }
+
     private class DefinitionCodec extends ToDocumentCodec<Definition> {
         DefinitionCodec(CodecRegistry registry) {
+            Codec<Definition.Name> nameCodec = registry.get(Definition.Name.class);
             Codec<BigDecimal> bigDecimalCodec = registry.get(BigDecimal.class);
 
             register((writer, value, encoderContext) -> {
-                writer.writeString(Definition.Fields.name, value.name);
+                writer.writeName(Definition.Fields.name);
+                encoderContext.encodeWithChildContext(nameCodec, writer, value.name);
 
                 writer.writeName(Definition.Fields.value);
                 encoderContext.encodeWithChildContext(bigDecimalCodec, writer, value.value);
             });
             register((reader, decoderContext) -> {
-                String name = reader.readString(Definition.Fields.name);
+                reader.readName(Definition.Fields.name);
+                Definition.Name name = nameCodec.decode(reader, decoderContext);
 
                 reader.readName(Definition.Fields.value);
                 BigDecimal value = bigDecimalCodec.decode(reader, decoderContext);
@@ -124,6 +155,86 @@ public class ComputationCodecProvider implements CodecProvider {
         @Override
         protected int version() {
             return 1;
+        }
+    }
+
+    private class DefinitionNameCodec extends ToStringCodec<Definition.Name> {
+
+        @Override
+        String toString(Definition.Name value) {
+            return value.toString();
+        }
+
+        @Override
+        Definition.Name fromString(String value) {
+            return new Definition.Name(value);
+        }
+    }
+
+    private class ComputationCodec extends ToDocumentWithIdCodec<Computation, Computation.Id> {
+
+        ComputationCodec(CodecRegistry registry) {
+            super(registry.get(Computation.Id.class));
+            Codec<Structure.Id> structureIdCodec = registry.get(Structure.Id.class);
+            Codec<Element.Name> elementNameCodec = registry.get(Element.Name.class);
+            Codec<Computation.Expression> expressionCodec = registry.get(Computation.Expression.class);
+
+            register((writer, value, encoderContext) -> {
+                writer.writeName(Computation.Fields.structureId);
+                encoderContext.encodeWithChildContext(structureIdCodec, writer, value.structureId);
+
+                writer.writeName(Computation.Fields.elementName);
+                encoderContext.encodeWithChildContext(elementNameCodec, writer, value.elementName);
+
+                writer.writeName(Computation.Fields.expression);
+                encoderContext.encodeWithChildContext(expressionCodec, writer, value.expression);
+            });
+            register((reader, decoderContext, id) -> {
+                reader.readName(Computation.Fields.structureId);
+                Structure.Id structureId = structureIdCodec.decode(reader, decoderContext);
+
+                reader.readName(Computation.Fields.elementName);
+                Element.Name elementName = elementNameCodec.decode(reader, decoderContext);
+
+                reader.readName(Computation.Fields.expression);
+                Computation.Expression expression = expressionCodec.decode(reader, decoderContext);
+
+                return new Computation(id, structureId, elementName, expression);
+            }, 1);
+        }
+
+        @Override
+        protected Computation.Id id(Computation value) {
+            return value.id;
+        }
+
+        @Override
+        protected int version() {
+            return 1;
+        }
+    }
+
+    private class ComputationIdCodec extends ToStringCodec<Computation.Id> {
+        @Override
+        protected String toString(Computation.Id value) {
+            return value.toString();
+        }
+
+        @Override
+        protected Computation.Id fromString(String value) {
+            return new Computation.Id(value);
+        }
+    }
+
+    private class ComputationExpressionCodec extends ToStringCodec<Computation.Expression> {
+        @Override
+        protected String toString(Computation.Expression value) {
+            return value.toString();
+        }
+
+        @Override
+        protected Computation.Expression fromString(String value) {
+            return new Computation.Expression(value);
         }
     }
 }
