@@ -14,7 +14,7 @@ import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.UpdateOptions;
 import de.stphngrtz.computation.model.Computation;
 import de.stphngrtz.computation.model.Structure;
-import de.stphngrtz.computation.utils.kryo.KryoMessage;
+import de.stphngrtz.computation.utils.akka.Message;
 import org.bson.BsonDocument;
 
 import java.util.*;
@@ -90,7 +90,7 @@ public class Web extends AbstractActor {
 
     public interface Protocol {
 
-        final class StructureCreateRequest implements KryoMessage {
+        final class StructureCreateRequest implements Message {
             final Structure structure;
 
             public StructureCreateRequest(Structure structure) {
@@ -98,7 +98,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class StructureGetRequest implements KryoMessage {
+        final class StructureGetRequest implements Message {
             final Structure.Id structureId;
 
             public StructureGetRequest(Structure.Id structureId) {
@@ -106,7 +106,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class StructureGetResponse implements KryoMessage {
+        final class StructureGetResponse implements Message {
             public final Optional<Structure> structure;
 
             StructureGetResponse(Optional<Structure> structure) {
@@ -114,7 +114,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class StructureUpdateRequest implements KryoMessage {
+        final class StructureUpdateRequest implements Message {
             final Structure structure;
 
             public StructureUpdateRequest(Structure structure) {
@@ -122,7 +122,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class StructureDeleteRequest implements KryoMessage {
+        final class StructureDeleteRequest implements Message {
             final Structure.Id structureId;
 
             public StructureDeleteRequest(Structure.Id structureId) {
@@ -130,7 +130,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class StructuresGetRequest implements KryoMessage {
+        final class StructuresGetRequest implements Message {
             private final Optional<String> ids;
             private final Optional<String> fields;
 
@@ -148,7 +148,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class StructuresGetResponse implements KryoMessage {
+        final class StructuresGetResponse implements Message {
             public final List<Map<String, Object>> structures;
 
             StructuresGetResponse(List<Map<String, Object>> structures) {
@@ -156,7 +156,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class ComputationCreateRequest implements KryoMessage {
+        final class ComputationCreateRequest implements Message {
             final Computation computation;
 
             public ComputationCreateRequest(Computation computation) {
@@ -164,7 +164,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class ComputationGetRequest implements KryoMessage {
+        final class ComputationGetRequest implements Message {
             final Computation.Id computationId;
 
             public ComputationGetRequest(Computation.Id computationId) {
@@ -172,7 +172,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class ComputationGetResponse implements KryoMessage {
+        final class ComputationGetResponse implements Message {
             public final Optional<Computation> computation;
 
             ComputationGetResponse(Optional<Computation> computation) {
@@ -180,7 +180,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class ComputationDeleteRequest implements KryoMessage {
+        final class ComputationDeleteRequest implements Message {
             final Computation.Id computationId;
 
             public ComputationDeleteRequest(Computation.Id computationId) {
@@ -188,7 +188,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class ComputationsGetRequest implements KryoMessage {
+        final class ComputationsGetRequest implements Message {
             private final Optional<String> ids;
             private final Optional<String> fields;
 
@@ -206,7 +206,7 @@ public class Web extends AbstractActor {
             }
         }
 
-        final class ComputationsGetResponse implements KryoMessage {
+        final class ComputationsGetResponse implements Message {
             public final List<Map<String, Object>> computations;
 
             ComputationsGetResponse(List<Map<String, Object>> computations) {
